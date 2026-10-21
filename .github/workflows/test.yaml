@@ -1,0 +1,33 @@
+name: Flutter Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  package-score:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install Pana
+        run: dart pub global activate pana
+
+      - name: Check package score
+        run: dart pub global run pana --exit-code-threshold 0 .
+
+      - name: Run Unit & Widget Tests
+        run: flutter test .
