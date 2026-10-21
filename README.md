@@ -8,8 +8,7 @@ Flutter's standard APIs can make Android- and iOS-style scroll coordination diff
 
 For pull-to-refresh, notification-based implementations react after content moves. Consumption callbacks let the indicator handle movement first and pass the remainder to the content, keeping both in one continuous interaction.
 
-> [!Note]
-> Currently, only vertical scrolling is supported.
+Both vertical and horizontal scrolling are supported. Connections handle vertical events by default, set `axis: Axis.horizontal` to handle horizontal events.
 
 ## Related Packages
 
@@ -30,6 +29,37 @@ See [example/main.dart](example/main.dart) for a commented example where a heade
 
 > [!Note]
 > Wrapping a standard `ScrollController` with a connection is not enough. The scrollable must use a `NestedScrollController` to participate in nested scrolling.
+
+### How to use horizontal scrolling?
+
+Set the connection's axis and the scrollable's direction to `Axis.horizontal`. When using `NestedScrollControllerScope`, set its `scrollDirection` to match:
+
+```dart
+NestedScrollConnection(
+  axis: Axis.horizontal,
+  onPreScroll: (available, position) {
+    // Return the amount consumed by your component.
+    return 0;
+  },
+  child: NestedScrollControllerScope(
+    scrollDirection: Axis.horizontal,
+    factory: (_) => NestedScrollController(),
+    builder: (context, controller) => ListView.builder(
+      controller: controller,
+      scrollDirection: Axis.horizontal,
+      itemCount: 20,
+      itemBuilder: (context, index) => SizedBox(
+        width: 120,
+        child: Text('Item $index'),
+      ),
+    ),
+  ),
+);
+```
+
+Connections and predicates only receive events from their configured axis. Events pass through connections on the other axis to matching ancestors. Controller scopes share a primary controller only when their axes match.
+
+With `reverse` or RTL text direction, callbacks still use scroll-coordinate signs rather than physical left/right directions.
 
 ### How much should a callback return?
 
@@ -64,7 +94,7 @@ Use `predicate` when a connection needs priority over the normal propagation ord
 
 `NestedScrollControllerScope` provides a controller to its builder and descendants through `PrimaryScrollController`. It selects a controller in the following order:
 
-1. The primary controller provided by an ancestor, if it is a `NestedScrollController`.
+1. The primary controller provided by an ancestor, if it is a `NestedScrollController` with the same `scrollDirection`.
 2. The explicit `controller` passed to the scope.
 3. A controller created by `factory`.
 

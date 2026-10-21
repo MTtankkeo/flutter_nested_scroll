@@ -17,8 +17,8 @@ typedef NestedScrollWidgetBuilder =
 
 /// Ensures a single [NestedScrollController] is used within the widget tree.
 ///
-/// If an ancestor has already provided a [NestedScrollController] via
-/// [PrimaryScrollController], this widget uses that controller to avoid
+/// If an ancestor has already provided a [NestedScrollController] for the same
+/// axis via [PrimaryScrollController], this widget uses that controller to avoid
 /// conflicts caused by multiple controllers being created by different
 /// widgets or packages.
 ///
@@ -29,6 +29,7 @@ class NestedScrollControllerScope extends StatefulWidget {
     required this.factory,
     required this.builder,
     this.controller,
+    this.scrollDirection = .vertical,
   });
 
   /// Called to create a [NestedScrollController] if no controller is provided.
@@ -41,6 +42,10 @@ class NestedScrollControllerScope extends StatefulWidget {
   /// Optional controller that can be passed from outside.
   /// If provided, the widget will use this instead of creating a new one.
   final NestedScrollController? controller;
+
+  /// The axis used for primary controller inheritance and sharing.
+  /// Scopes on different axes use separate controllers.
+  final Axis scrollDirection;
 
   @override
   State<NestedScrollControllerScope> createState() => _NestedScrollControllerScopeState();
@@ -70,11 +75,12 @@ class _NestedScrollControllerScopeState extends State<NestedScrollControllerScop
 
   @override
   Widget build(BuildContext context) {
-    final primary = PrimaryScrollController.maybeOf(context);
+    final primary = context.dependOnInheritedWidgetOfExactType<PrimaryScrollController>();
+    final controller = primary?.controller;
 
     // Reuse the existing NestedScrollController.
-    if (primary != null && primary is NestedScrollController) {
-      return widget.builder(context, primary);
+    if (controller is NestedScrollController && primary?.scrollDirection == widget.scrollDirection) {
+      return widget.builder(context, controller);
     }
 
     // Create a NestedScrollController if none exists.
@@ -84,7 +90,7 @@ class _NestedScrollControllerScopeState extends State<NestedScrollControllerScop
     }
 
     return PrimaryScrollController(
-      scrollDirection: .vertical,
+      scrollDirection: widget.scrollDirection,
       controller: _controller!,
       child: widget.builder(context, _controller!),
     );

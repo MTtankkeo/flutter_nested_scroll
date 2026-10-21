@@ -139,6 +139,61 @@ void main() {
       expect(calls, isEmpty);
     });
 
+    // Axis filtering applies to every event and propagation mode, including predicates.
+    // A nonmatching connection must not block matching ancestors.
+    for (final axis in Axis.values) {
+      final Axis other = axis == .vertical ? .horizontal : .vertical;
+
+      for (final event in _Event.values) {
+        for (final propagation in NestedScrollPropagation.values) {
+          for (final nearestMatches in [false, true]) {
+            for (final available in [-100.0, 100.0]) {
+              testWidgets('$axis $event $propagation filters axes, nearest $nearestMatches, input $available', (
+                tester,
+              ) async {
+                final calls = <int>[];
+                final axes = nearestMatches ? [axis, other, axis] : [other, axis, other];
+                final context = await _pumpConnections(
+                  tester,
+                  axis: axis,
+                  axes: axes,
+                  event: event,
+                  propagation: propagation,
+                  predicate: (index, _, _) {
+                    expect(axes[index], axis);
+                    return false;
+                  },
+                  onConsume: (index, amount, _) {
+                    calls.add(index);
+                    return amount.sign * 10;
+                  },
+                );
+
+                final consumed = event.dispatch(context.connection, available, context.position);
+                final childFirst = propagation == .selfFirst || (propagation == .directional && available > 0);
+
+                expect(calls, nearestMatches ? (childFirst ? [0, 2] : [2, 0]) : [1]);
+                expect(consumed, available.sign * (nearestMatches ? 20 : 10));
+              });
+            }
+          }
+        }
+
+        testWidgets('$axis $event ignores connections on the other axis', (tester) async {
+          final context = await _pumpConnections(
+            tester,
+            axis: axis,
+            axes: [other, other, other],
+            event: event,
+            predicate: (_, _, _) => throw StateError('A mismatched predicate must not run.'),
+            onConsume: (_, _, _) => throw StateError('A mismatched consumer must not run.'),
+          );
+
+          expect(event.dispatch(context.connection, 100, context.position), 0);
+        });
+      }
+    }
+
     // Lookup should select the nearest connection even with unrelated widgets between ancestors.
     // The ancestor list should contain each connection once, from the child toward the root.
     testWidgets('finds the nearest connection and lists its ancestors', (tester) async {
@@ -151,6 +206,7 @@ void main() {
         const ValueKey(1),
         const ValueKey(2),
       ]);
+
       expect(NestedScrollConnection.of(tester.element(find.byType(Directionality))), isNull);
     });
   });
@@ -183,6 +239,8 @@ Future<_TestContext> _pumpConnections(
   _Event event = .preScroll,
   NestedScrollPropagation propagation = .directional,
   List<NestedScrollPropagation>? modes,
+  Axis axis = .vertical,
+  List<Axis>? axes,
   Set<int> callbackIndices = const {0, 1, 2},
   bool Function(int index, double available, NestedScrollPosition position)? predicate,
   required double Function(int index, double available, NestedScrollPosition position) onConsume,
@@ -199,7 +257,8 @@ Future<_TestContext> _pumpConnections(
 
   Widget child = SingleChildScrollView(
     controller: controller,
-    child: const SizedBox(height: 1000),
+    scrollDirection: axis,
+    child: const SizedBox(width: 1000, height: 1000),
   );
 
   for (var index = 0; index < 3; index++) {
@@ -214,6 +273,7 @@ Future<_TestContext> _pumpConnections(
 
     child = NestedScrollConnection(
       key: ValueKey(index),
+      axis: axes?[index] ?? axis,
       propagation: modes?[index] ?? propagation,
       predicate: predicate == null
           ? null

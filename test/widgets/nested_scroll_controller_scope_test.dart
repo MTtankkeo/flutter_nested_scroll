@@ -4,6 +4,89 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('NestedScrollControllerScope', () {
+    for (final axis in Axis.values) {
+      testWidgets('provides primary inheritance for $axis scrolling', (tester) async {
+        final owned = _TrackedController();
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: NestedScrollControllerScope(
+              scrollDirection: axis,
+              factory: (_) => owned,
+              builder: (context, selected) {
+                return SingleChildScrollView(
+                  primary: true,
+                  scrollDirection: axis,
+                  child: const SizedBox(
+                    width: 1000,
+                    height: 1000,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+
+        expect(owned.position.axis, axis);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(owned.disposals, 1);
+      });
+
+      for (final sameAxis in [false, true]) {
+        testWidgets('$axis nested scopes share controllers only on matching axes: $sameAxis', (tester) async {
+          final outer = _TrackedController();
+          final inner = _TrackedController();
+
+          final Axis innerAxis = sameAxis ? axis : (axis == .vertical ? .horizontal : .vertical);
+
+          await tester.pumpWidget(
+            Directionality(
+              textDirection: .ltr,
+              child: Center(
+                child: SizedBox(
+                  width: 300,
+                  height: 400,
+                  child: NestedScrollControllerScope(
+                    scrollDirection: axis,
+                    factory: (_) => outer,
+                    builder: (_, first) {
+                      return NestedScrollControllerScope(
+                        scrollDirection: innerAxis,
+                        factory: (_) => inner,
+                        builder: (_, second) {
+                          expect(second, same(sameAxis ? first : inner));
+
+                          return SingleChildScrollView(
+                            primary: true,
+                            scrollDirection: innerAxis,
+                            child: const SizedBox(
+                              width: 1000,
+                              height: 1000,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          expect((sameAxis ? outer : inner).position.axis, innerAxis);
+          expect(outer.hasClients, sameAxis);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          expect(outer.disposals, 1);
+          expect(inner.disposals, sameAxis ? 0 : 1);
+
+          if (sameAxis) inner.dispose();
+        });
+      }
+    }
+
     // Without a suitable ancestor or explicit controller, the scope creates its own controller.
     // Rebuilding should reuse it, expose it to descendants, and dispose it once when removed.
     testWidgets('creates, provides, reuses, and disposes its own controller', (tester) async {

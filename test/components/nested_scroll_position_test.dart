@@ -561,6 +561,107 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  group('horizontal scrolling', () {
+    for (final direction in TextDirection.values) {
+      for (final reverse in [false, true]) {
+        for (final physics in [const ClampingScrollPhysics(), const BouncingScrollPhysics()]) {
+          testWidgets('$direction reverse $reverse $physics shares real horizontal drags and flings', (tester) async {
+            final moves = <double>[];
+            final flings = <double>[];
+            final context = await _pumpNestedScroll(
+              tester,
+              axis: .horizontal,
+              textDirection: direction,
+              reverse: reverse,
+              physics: physics,
+              onPreScroll: (available, _) {
+                moves.add(available);
+                return available / 4;
+              },
+              onFling: (available, _) {
+                flings.add(available);
+                return available / 2;
+              },
+            );
+
+            final position = context.position;
+            position.goIdle();
+            moves.clear();
+            flings.clear();
+
+            final drag = Offset(position.axisDirection == .right ? -80 : 80, 0);
+
+            await tester.drag(find.byType(SingleChildScrollView), drag);
+            await tester.pumpAndSettle();
+
+            expect(position.axis, Axis.horizontal);
+            expect(position.pixels, greaterThan(200));
+            expect(moves.any((amount) => amount != 0), isTrue);
+
+            await tester.fling(find.byType(SingleChildScrollView), -drag * 2.5, 1500);
+            await tester.pumpAndSettle();
+
+            expect(flings.any((velocity) => velocity != 0), isTrue);
+
+            expect(
+              position.pixels,
+              inInclusiveRange(
+                position.minScrollExtent,
+                position.maxScrollExtent,
+              ),
+            );
+
+            expect(position.isScrollingNotifier.value, isFalse);
+            expect(tester.takeException(), isNull);
+          });
+        }
+
+        testWidgets('$direction reverse $reverse shares and settles horizontal bouncing', (tester) async {
+          final bounces = <double>[];
+          final context = await _pumpNestedScroll(
+            tester,
+            axis: .horizontal,
+            textDirection: direction,
+            reverse: reverse,
+            initialOffset: 0,
+            physics: const BouncingScrollPhysics(),
+            onBouncing: (available, position) {
+              bounces.add(available);
+
+              // Share outward movement, then repay the borrowed bounce on recovery.
+              if (available * position.lentPixels < 0) {
+                return available.sign * available.abs().clamp(0.0, position.lentPixels.abs());
+              }
+
+              return available / 2;
+            },
+          );
+          final position = context.position;
+          position.goIdle();
+
+          final drag = Offset(position.axisDirection == .right ? 200 : -200, 0);
+
+          await tester.drag(find.byType(SingleChildScrollView), drag);
+          await tester.pumpAndSettle();
+
+          expect(bounces.any((amount) => amount != 0), isTrue);
+
+          expect(
+            position.pixels,
+            inInclusiveRange(
+              position.minScrollExtent,
+              position.maxScrollExtent,
+            ),
+          );
+
+          expect(position.lentPixels, closeTo(0, precisionErrorTolerance));
+          expect(position.isScrollingNotifier.value, isFalse);
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  });
+
   group('contentExtent', () {
     testWidgets('reports short list content instead of the viewport height', (tester) async {
       final controller = NestedScrollController();
@@ -768,6 +869,9 @@ Future<_TestContext> _pumpNestedScroll(
   ScrollPhysics physics = const ClampingScrollPhysics(),
   double initialOffset = 200,
   double contentHeight = 1000,
+  Axis axis = .vertical,
+  bool reverse = false,
+  TextDirection textDirection = .ltr,
   bool connected = true,
   NestedScrollListener? onPreScroll,
   NestedScrollListener? onPostScroll,
@@ -786,12 +890,18 @@ Future<_TestContext> _pumpNestedScroll(
   // Build the scroll view with an optional parent connection.
   Widget child = SingleChildScrollView(
     controller: controller,
+    scrollDirection: axis,
+    reverse: reverse,
     physics: physics,
-    child: SizedBox(height: contentHeight, width: 300),
+    child: SizedBox(
+      height: axis == Axis.vertical ? contentHeight : 400,
+      width: axis == Axis.horizontal ? contentHeight : 300,
+    ),
   );
 
   if (connected) {
     child = NestedScrollConnection(
+      axis: axis,
       onPreScroll: onPreScroll,
       onPostScroll: onPostScroll,
       onFling: onFling,
@@ -803,7 +913,7 @@ Future<_TestContext> _pumpNestedScroll(
   // Mount a fixed viewport and collect scroll notifications.
   await tester.pumpWidget(
     Directionality(
-      textDirection: .ltr,
+      textDirection: textDirection,
       child: Center(
         child: SizedBox(
           width: 300,

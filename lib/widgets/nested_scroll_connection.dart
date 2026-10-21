@@ -34,8 +34,8 @@ enum NestedScrollPropagation {
   /// before being handled by the current widget.
   deferToAncestor,
 
-  /// Sets downward scrolls to be handled by the child first,
-  /// while upward scrolls are handled by the ancestor first.
+  /// Handles positive input child-first and negative input ancestor-first,
+  /// using scroll coordinates regardless of axis, reverse, or text direction.
   directional,
 }
 
@@ -52,15 +52,34 @@ class NestedScrollConnection extends StatefulWidget {
     this.onBouncing,
     this.predicate,
     this.propagation = .directional,
+    this.axis = .vertical,
     required this.child,
   });
 
+  /// Called before the child applies the available scroll movement.
   final NestedScrollListener? onPreScroll;
+
+  /// Called for movement remaining after the child reaches a scroll boundary.
   final NestedScrollListener? onPostScroll;
+
+  /// Called before a ballistic simulation starts with the available velocity.
   final NestedScrollListener? onFling;
+
+  /// Called for bouncing overflow or repayment of a borrowed bounce offset.
   final NestedScrollListener? onBouncing;
+
+  /// Whether this connection gets priority before normal propagation.
   final NestedScrollPredicate? predicate;
+
+  /// The order in which this connection and matching ancestors consume events.
+  /// Defaults to [NestedScrollPropagation.directional].
   final NestedScrollPropagation propagation;
+
+  /// The scroll axis handled by this connection.
+  /// Events from the other axis pass through to matching ancestors.
+  final Axis axis;
+
+  /// The subtree whose nested scroll events are handled by this connection.
   final Widget child;
 
   /// Finds the ancestor [NestedScrollConnectionState] from the closest
@@ -96,7 +115,14 @@ class NestedScrollConnectionState extends State<NestedScrollConnection> {
     NestedScrollConsumer selfConsumer,
     NestedScrollConsumer ancestorConsumer,
   ) {
-    final List<NestedScrollConnection> delegators = findSelfAndAncestorWidgets();
+    // If the axes differ, skip this connection and pass the event to its ancestor.
+    if (widget.axis != position.axis) {
+      return ancestorConsumer(widget)?.call(available, position) ?? 0.0;
+    }
+
+    final delegators = findSelfAndAncestorWidgets().where((connection) {
+      return connection.axis == position.axis;
+    }).toList();
 
     // Current consumed amount from available.
     double consumed = 0;

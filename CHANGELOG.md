@@ -13,3 +13,4 @@
 ## 1.1.0
 
 - Add `NestedScrollPosition.contentExtent` to report content length along the scroll axis without enabling `shrinkWrap`, including content shorter than the viewport.
+- Add horizontal scrolling support with `NestedScrollConnection.axis` and `NestedScrollControllerScope.scrollDirection`.
