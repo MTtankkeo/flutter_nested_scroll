@@ -4,11 +4,9 @@ This package coordinates scroll events between a scrollable widget and its ances
 
 ---
 
-Reproducing Android and iOS style nested scroll interactions with Flutter standard scrolling APIs can be difficult, requiring custom slivers or working within layout and scroll coordination constraints. This package exposes explicit consumption callbacks so ancestors can share scroll movement, fling velocity, and bouncing with a child.
+Flutter's standard APIs can make Android- and iOS-style scroll coordination difficult. Similar to [Jetpack Compose nested scrolling](https://developer.android.com/develop/ui/compose/touch-input/scroll/nested-scroll-modifiers), this package lets ancestors consume movement before the child or handle the remainder afterward. It also coordinates fling velocity and bouncing without requiring a sliver-based layout.
 
-The approach is conceptually similar to [Jetpack Compose nested scrolling](https://developer.android.com/develop/ui/compose/touch-input/scroll/nested-scroll-modifiers), ancestors can consume movement before the child or handle what remains afterward. This lets you build native-style scroll behavior in custom components without requiring a sliver-based layout.
-
-This is especially useful for pull-to-refresh. Notification-based implementations receive scroll events and react to movement already applied to the content. This package lets a custom refresh indicator consume scroll movement itself and pass only the remainder to the content. That control addresses the disconnected, awkward feel of conventional Flutter pull-to-refresh interactions by coordinating the indicator and content as one continuous interaction.
+For pull-to-refresh, notification-based implementations react after content moves. Consumption callbacks let the indicator handle movement first and pass the remainder to the content, keeping both in one continuous interaction.
 
 > [!Note]
 > Currently, only vertical scrolling is supported.
