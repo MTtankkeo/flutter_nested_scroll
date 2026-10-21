@@ -1,6 +1,6 @@
 name: flutter_nested_scroll
 description: A Flutter package for coordinating scroll events across nested scrollable widgets.
-version: 1.0.0
+version: 1.0.0+1
 repository: https://github.com/MTtankkeo/flutter_nested_scroll
 topics:
   - scroll

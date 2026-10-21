@@ -52,7 +52,7 @@ For pre-scroll and post-scroll offsets, positive values move toward the minimum 
 
 Connections can be nested. Set `propagation` to control which connection handles an event first. Each consumer receives the remaining amount, and propagation stops when the input is fully consumed.
 
-| NestedScrollConnectionPropagation | Description |
+| NestedScrollPropagation | Description |
 | --- | --- |
 | .selfFirst | Handle the event locally, then pass the remainder to ancestors. |
 | .deferToAncestor | Let ancestors consume first, then handle the remainder locally. |

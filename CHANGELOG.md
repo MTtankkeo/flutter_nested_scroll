@@ -5,3 +5,7 @@
 - Fix overscroll calculations after pre-scroll consumption and preserve fling velocity without a connection.
 - Fix accumulated consumption in child-first and ancestor-first propagation.
 - Fix controller replacement and ownership updates when `NestedScrollControllerScope` rebuilds.
+
+## 1.0.0+1
+
+- Rename `NestedScrollConnectionPropagation` enum identifier to `NestedScrollPropagation`.

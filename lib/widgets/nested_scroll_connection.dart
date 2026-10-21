@@ -25,7 +25,7 @@ typedef NestedScrollConsumer =
     );
 
 /// The enumeration that defines how nested scrolling events are handled.
-enum NestedScrollConnectionPropagation {
+enum NestedScrollPropagation {
   /// Sets the current widget to handle scrolling events first
   /// before passing any remaining events to an ancestor.
   selfFirst,
@@ -51,7 +51,7 @@ class NestedScrollConnection extends StatefulWidget {
     this.onFling,
     this.onBouncing,
     this.predicate,
-    this.propagation = NestedScrollConnectionPropagation.directional,
+    this.propagation = .directional,
     required this.child,
   });
 
@@ -60,7 +60,7 @@ class NestedScrollConnection extends StatefulWidget {
   final NestedScrollListener? onFling;
   final NestedScrollListener? onBouncing;
   final NestedScrollPredicate? predicate;
-  final NestedScrollConnectionPropagation propagation;
+  final NestedScrollPropagation propagation;
   final Widget child;
 
   /// Finds the ancestor [NestedScrollConnectionState] from the closest

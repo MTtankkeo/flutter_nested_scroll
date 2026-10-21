@@ -8,7 +8,7 @@ void main() {
     // Consuming 30, 20, and 10 pixels must return 60 in total, with the input sign preserved.
     // Check all four event types so their callbacks cannot accidentally be wired together.
     for (final event in _Event.values) {
-      for (final propagation in NestedScrollConnectionPropagation.values) {
+      for (final propagation in NestedScrollPropagation.values) {
         for (final available in [-100.0, 100.0]) {
           testWidgets('${event.name}: ${propagation.name} preserves order and totals for $available', (tester) async {
             final calls = <(int, double)>[];
@@ -46,7 +46,7 @@ void main() {
     // Once a connection consumes the entire input, later connections must not run.
     // The same early-stop rule applies to offsets, fling velocity, and bouncing.
     for (final event in _Event.values) {
-      for (final propagation in NestedScrollConnectionPropagation.values) {
+      for (final propagation in NestedScrollPropagation.values) {
         testWidgets('${event.name}: ${propagation.name} stops after full consumption', (tester) async {
           final calls = <int>[];
           final context = await _pumpConnections(
@@ -181,8 +181,8 @@ enum _Event {
 Future<_TestContext> _pumpConnections(
   WidgetTester tester, {
   _Event event = .preScroll,
-  NestedScrollConnectionPropagation propagation = .directional,
-  List<NestedScrollConnectionPropagation>? modes,
+  NestedScrollPropagation propagation = .directional,
+  List<NestedScrollPropagation>? modes,
   Set<int> callbackIndices = const {0, 1, 2},
   bool Function(int index, double available, NestedScrollPosition position)? predicate,
   required double Function(int index, double available, NestedScrollPosition position) onConsume,
