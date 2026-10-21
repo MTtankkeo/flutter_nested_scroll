@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_nested_scroll/flutter_nested_scroll.dart';
 
 /// Notification indicating that a [NestedScrollPosition] has finished scrolling.
@@ -50,6 +51,69 @@ class NestedScrollPosition extends ScrollPositionWithSingleContext {
 
   /// Returns the pixels that is final value combined with [lentPixels] and [pixels].
   double get totalPixels => super.pixels + lentPixels;
+
+  /// The laid-out content length along the scroll axis, including sliver padding.
+  ///
+  /// Unlike [extentTotal], this can be smaller than [viewportDimension].
+  /// Lazy lists may report an estimate until their last child is laid out.
+  ///
+  /// Read after layout. Returns null before content dimensions are available,
+  /// when detached, or when the viewport type is unsupported. Supports sliver
+  /// viewports and single-child box viewports without enabling shrink wrapping.
+  double? get contentExtent {
+    final targetContext = context.notificationContext;
+    if (!hasContentDimensions || targetContext == null || !targetContext.mounted) return null;
+
+    final root = targetContext.findRenderObject();
+    if (root == null || !root.attached) return null;
+
+    // Stop at this scrollable's viewport rather than inspecting nested scrollables.
+    RenderAbstractViewport? viewport;
+    void findViewport(RenderObject object) {
+      if (object is RenderAbstractViewport) {
+        viewport = object;
+        return;
+      }
+
+      object.visitChildren((child) {
+        if (viewport == null) findViewport(child);
+      });
+    }
+
+    findViewport(root);
+
+    final target = viewport;
+    if (target is RenderViewportBase) {
+      if (!identical(target.offset, this) || !target.hasSize) {
+        return null;
+      }
+
+      var extent = 0.0;
+      for (var child = target.firstChild; child != null; child = target.childAfter(child)) {
+        final geometry = child.geometry;
+        if (geometry == null) {
+          return null;
+        }
+
+        extent += geometry.scrollExtent;
+      }
+      return extent;
+    }
+
+    if (target case final RenderObjectWithChildMixin<RenderBox> boxViewport) {
+      final child = boxViewport.child;
+      if (child == null) {
+        return 0.0;
+      }
+      if (!child.hasSize) {
+        return null;
+      }
+
+      return axis == .vertical ? child.size.height : child.size.width;
+    }
+
+    return null;
+  }
 
   @override
   double get maxScrollExtent {

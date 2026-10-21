@@ -560,6 +560,205 @@ void main() {
     expect(context.position.isScrollingNotifier.value, isFalse);
     expect(tester.takeException(), isNull);
   });
+
+  group('contentExtent', () {
+    testWidgets('reports short list content instead of the viewport height', (tester) async {
+      final controller = NestedScrollController();
+      _disposeAfterTest(tester, controller);
+
+      await _pumpScrollView(
+        tester,
+        ListView(
+          controller: controller,
+          padding: .zero,
+          children: const [
+            SizedBox(height: 100),
+            SizedBox(height: 100),
+          ],
+        ),
+      );
+
+      expect(controller.position.viewportDimension, 600);
+      expect(controller.position.extentTotal, 600);
+      expect(controller.position.contentExtent, 200);
+    });
+
+    testWidgets('includes padding and follows changes to the content', (tester) async {
+      final controller = NestedScrollController();
+      _disposeAfterTest(tester, controller);
+
+      Future<void> pumpList(int count) => _pumpScrollView(
+        tester,
+        ListView.builder(
+          controller: controller,
+          padding: const EdgeInsets.only(top: 10, bottom: 20),
+          itemExtent: 100,
+          itemCount: count,
+          itemBuilder: (_, _) => const SizedBox(),
+        ),
+      );
+
+      await pumpList(2);
+      expect(controller.position.contentExtent, 230);
+
+      await pumpList(4);
+      expect(controller.position.contentExtent, 430);
+
+      await pumpList(0);
+      expect(controller.position.contentExtent, 30);
+    });
+
+    testWidgets('reports an empty list as zero', (tester) async {
+      final controller = NestedScrollController();
+      _disposeAfterTest(tester, controller);
+
+      await _pumpScrollView(
+        tester,
+        ListView(
+          controller: controller,
+          padding: .zero,
+          children: const [],
+        ),
+      );
+
+      expect(controller.position.contentExtent, 0);
+    });
+
+    testWidgets('measures a short grid including row spacing and padding', (tester) async {
+      final controller = NestedScrollController();
+      _disposeAfterTest(tester, controller);
+
+      await _pumpScrollView(
+        tester,
+        GridView.builder(
+          controller: controller,
+          padding: const .only(top: 10, bottom: 20),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisExtent: 100,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: 3,
+          itemBuilder: (_, _) => const SizedBox(),
+        ),
+      );
+
+      expect(controller.position.contentExtent, 242);
+    });
+
+    testWidgets('adds only the direct slivers of a custom scroll view', (tester) async {
+      final controller = NestedScrollController();
+      _disposeAfterTest(tester, controller);
+
+      await _pumpScrollView(
+        tester,
+        CustomScrollView(
+          controller: controller,
+          slivers: [
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 80),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.only(top: 10),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  const [
+                    SizedBox(height: 50),
+                    SizedBox(height: 50),
+                  ],
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 20),
+            ),
+          ],
+        ),
+      );
+
+      expect(controller.position.contentExtent, 210);
+    });
+
+    testWidgets('supports horizontal reversed and shrink-wrapped lists', (tester) async {
+      final controller = NestedScrollController();
+      _disposeAfterTest(tester, controller);
+
+      for (final shrinkWrap in [false, true]) {
+        await _pumpScrollView(
+          tester,
+          ListView(
+            controller: controller,
+            padding: .zero,
+            scrollDirection: .horizontal,
+            reverse: true,
+            shrinkWrap: shrinkWrap,
+            children: const [
+              SizedBox(width: 100),
+              SizedBox(width: 100),
+            ],
+          ),
+        );
+
+        expect(controller.position.contentExtent, 200);
+      }
+    });
+
+    testWidgets('reading a long list does not eagerly build its items', (tester) async {
+      final controller = NestedScrollController();
+      _disposeAfterTest(tester, controller);
+
+      var builds = 0;
+      await _pumpScrollView(
+        tester,
+        ListView.builder(
+          controller: controller,
+          padding: EdgeInsets.zero,
+          itemExtent: 100,
+          itemCount: 1000,
+          itemBuilder: (_, _) {
+            builds++;
+            return const SizedBox();
+          },
+        ),
+      );
+
+      final buildsAfterLayout = builds;
+
+      expect(controller.position.contentExtent, 100000);
+      expect(builds, buildsAfterLayout);
+      expect(builds, lessThan(20));
+    });
+
+    testWidgets('supports single-child content and stops before nested viewports', (tester) async {
+      final outer = NestedScrollController();
+      final inner = NestedScrollController();
+      _disposeAfterTest(tester, outer);
+      _disposeAfterTest(tester, inner);
+
+      await _pumpScrollView(
+        tester,
+        SingleChildScrollView(
+          controller: outer,
+          child: SizedBox(
+            height: 200,
+            child: ListView(
+              controller: inner,
+              padding: EdgeInsets.zero,
+              children: const [SizedBox(height: 1000)],
+            ),
+          ),
+        ),
+      );
+
+      expect(outer.position.contentExtent, 200);
+      expect(inner.position.contentExtent, 1000);
+
+      final position = outer.position;
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(position.contentExtent, isNull);
+    });
+  });
 }
 
 /// A fixed viewport keeps offsets independent of the test window size.
@@ -621,8 +820,15 @@ Future<_TestContext> _pumpNestedScroll(
     ),
   );
 
-  // Prime drag updates, then discard setup notifications.
-  controller.position.drag(DragStartDetails(), () {}).update(DragUpdateDetails(globalPosition: .zero, primaryDelta: 0));
+  {
+    final details = DragUpdateDetails(
+      globalPosition: .zero,
+      primaryDelta: 0,
+    );
+
+    // Prime drag updates, then discard setup notifications.
+    controller.position.drag(DragStartDetails(), () {}).update(details);
+  }
 
   notifications.clear();
 
@@ -638,4 +844,31 @@ final class _TestContext {
 
   /// Scroll notifications collected after setup, in dispatch order.
   final List<ScrollNotification> notifications;
+}
+
+/// Mounts the scroll view in a fixed viewport to verify its content extent.
+Future<void> _pumpScrollView(WidgetTester tester, Widget child) {
+  return tester.pumpWidget(
+    Directionality(
+      textDirection: .ltr,
+      child: Center(
+        child: SizedBox(
+          width: 300,
+          height: 600,
+          child: child,
+        ),
+      ),
+    ),
+  );
+}
+
+/// Unmounts the scroll views before disposing their controllers after each test.
+void _disposeAfterTest(
+  WidgetTester tester,
+  NestedScrollController controller,
+) {
+  addTearDown(() async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
 }
