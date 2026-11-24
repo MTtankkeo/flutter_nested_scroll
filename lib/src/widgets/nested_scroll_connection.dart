@@ -3,26 +3,23 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_nested_scroll/flutter_nested_scroll.dart';
 
 /// Signature for the callback that is called when nested scroll event consuming.
-typedef NestedScrollListener =
-    double Function(
-      double available,
-      NestedScrollPosition position,
-    );
+typedef NestedScrollListener = double Function(
+  double available,
+  NestedScrollPosition position,
+);
 
 /// Signature for the predicate that is used when all events from child
 /// widgets need to be consumed and taken over in specific situations.
-typedef NestedScrollPredicate =
-    bool Function(
-      double available,
-      NestedScrollPosition position,
-    );
+typedef NestedScrollPredicate = bool Function(
+  double available,
+  NestedScrollPosition position,
+);
 
 /// Signature for the callback that returns a [NestedScrollListener] which
 /// handles nested scroll consumption logic based on the connection.
-typedef NestedScrollConsumer =
-    NestedScrollListener? Function(
-      NestedScrollConnection connection,
-    );
+typedef NestedScrollConsumer = NestedScrollListener? Function(
+  NestedScrollConnection connection,
+);
 
 /// The enumeration that defines how nested scrolling events are handled.
 enum NestedScrollPropagation {
@@ -44,7 +41,7 @@ enum NestedScrollPropagation {
 ///
 /// Used by [NestedScrollConnection].
 class NestedScrollConnection extends StatefulWidget {
-  const NestedScrollConnection({
+  const new({
     super.key,
     this.onPreScroll,
     this.onPostScroll,

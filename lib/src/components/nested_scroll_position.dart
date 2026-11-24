@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_nested_scroll/flutter_nested_scroll.dart';
 
 /// Notification indicating that a [NestedScrollPosition] has finished scrolling.
@@ -27,7 +27,7 @@ class NestedScrollEndNotification extends ScrollNotification {
 ///
 /// Used by [NestedScrollController].
 class NestedScrollPosition extends ScrollPositionWithSingleContext {
-  NestedScrollPosition({
+  new({
     required super.physics,
     required super.context,
     super.debugLabel,
@@ -170,6 +170,11 @@ class NestedScrollPosition extends ScrollPositionWithSingleContext {
   void _ensureLentPixels() {
     final consumed = _bouncing(-lentPixels);
     lentPixels += consumed;
+
+    // Clear rounding residue to let the bounce settle.
+    if (lentPixels.abs() < precisionErrorTolerance) {
+      lentPixels = 0;
+    }
   }
 
   void didOverscroll() {
@@ -255,6 +260,8 @@ class NestedScrollPosition extends ScrollPositionWithSingleContext {
         final double restDelta = bouncingDelta - consumed;
 
         lentPixels += consumed;
+        // Clear rounding residue to let the bounce settle.
+        if (lentPixels.abs() < precisionErrorTolerance) lentPixels = 0;
 
         if (restDelta.abs() > precisionErrorTolerance) {
           correctBy(restDelta);

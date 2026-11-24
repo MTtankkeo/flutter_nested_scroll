@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_nested_scroll/flutter_nested_scroll.dart';
 
 /// A [ScrollController] that always uses [NestedScrollPosition].
 class NestedScrollController extends ScrollController {
-  NestedScrollController({
+  new({
     super.debugLabel,
     super.initialScrollOffset,
     super.keepScrollOffset,

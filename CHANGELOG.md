@@ -14,3 +14,9 @@
 
 - Add `NestedScrollPosition.contentExtent` to report content length along the scroll axis without enabling `shrinkWrap`, including content shorter than the viewport.
 - Add horizontal scrolling support with `NestedScrollConnection.axis` and `NestedScrollControllerScope.scrollDirection`.
+
+## 1.2.0
+- Fix bouncing animations that fail to settle when floating-point residue remains in `lentPixels`.
+- Move internal implementations to `lib/src`.
+- Replace the deprecated Flutter Material import with Flutter widgets imports.
+- Raise the minimum supported versions to Dart 3.13 and Flutter 3.47.

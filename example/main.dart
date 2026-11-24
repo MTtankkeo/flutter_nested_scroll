@@ -1,14 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_nested_scroll/flutter_nested_scroll.dart';
 
 void main() {
   runApp(
-    const MaterialApp(
-      home: Scaffold(
-        body: SafeArea(
-          child: NestedScrollExample(),
-        ),
-      ),
+    const SafeArea(
+      child: NestedScrollExample(),
     ),
   );
 }
@@ -36,7 +32,10 @@ class _NestedScrollExampleState extends State<NestedScrollExample> {
   /// Returns the signed amount consumed so the list can handle the remainder.
   double _consumeHeaderOffset(double available, NestedScrollPosition position) {
     // No consume when bouncing overscroll for appbar pixels safety.
-    if (position.totalPixels < position.minScrollExtent || position.totalPixels > position.maxScrollExtent) {
+    if (position.totalPixels < position.minScrollExtent) {
+      return 0;
+    }
+    if (position.totalPixels > position.maxScrollExtent) {
       return 0;
     }
 
@@ -66,7 +65,7 @@ class _NestedScrollExampleState extends State<NestedScrollExample> {
               SizedBox(
                 height: _headerExtent,
                 child: const ColoredBox(
-                  color: Colors.redAccent,
+                  color: Color(0xFFFF0000),
                   child: Center(
                     child: Text(
                       'Header',
@@ -80,9 +79,7 @@ class _NestedScrollExampleState extends State<NestedScrollExample> {
                   controller: controller,
                   itemCount: 100,
                   itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text('Item $index'),
-                    );
+                    return Text('Item $index');
                   },
                 ),
               ),

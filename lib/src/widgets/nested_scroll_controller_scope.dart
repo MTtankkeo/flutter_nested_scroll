@@ -3,17 +3,15 @@ import 'package:flutter_nested_scroll/flutter_nested_scroll.dart';
 
 /// Signature for a function that creates a [NestedScrollController] when needed.
 /// Called only if no controller exists in the current context.
-typedef NestedScrollControllerBuilder =
-    NestedScrollController Function(
-      BuildContext context,
-    );
+typedef NestedScrollControllerBuilder = NestedScrollController Function(
+  BuildContext context,
+);
 
 /// Signature for building a widget that requires a [NestedScrollController].
-typedef NestedScrollWidgetBuilder =
-    Widget Function(
-      BuildContext context,
-      NestedScrollController controller,
-    );
+typedef NestedScrollWidgetBuilder = Widget Function(
+  BuildContext context,
+  NestedScrollController controller,
+);
 
 /// Ensures a single [NestedScrollController] is used within the widget tree.
 ///
@@ -24,7 +22,7 @@ typedef NestedScrollWidgetBuilder =
 ///
 /// Otherwise, it creates a new [NestedScrollController] for its children.
 class NestedScrollControllerScope extends StatefulWidget {
-  const NestedScrollControllerScope({
+  const new({
     super.key,
     required this.factory,
     required this.builder,

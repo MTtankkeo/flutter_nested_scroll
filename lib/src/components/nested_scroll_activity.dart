@@ -4,7 +4,7 @@ import 'package:flutter_nested_scroll/flutter_nested_scroll.dart';
 /// A [BallisticScrollActivity] that applies scroll updates
 /// based on the delta for a [NestedScrollPosition].
 class BallisticNestedScrollActivity extends BallisticScrollActivity {
-  BallisticNestedScrollActivity(
+  new(
     super.delegate,
     super.simulation,
     super.vsync,
