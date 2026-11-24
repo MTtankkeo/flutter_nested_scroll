@@ -2,13 +2,17 @@
 
 This package coordinates scroll events between a scrollable widget and its ancestors. It allows surrounding widgets to consume scroll offsets, fling velocity, and bouncing to implement custom scroll behavior.
 
----
+## Overview
 
-Flutter's standard APIs can make Android- and iOS-style scroll coordination difficult. Similar to [Jetpack Compose nested scrolling](https://developer.android.com/develop/ui/compose/touch-input/scroll/nested-scroll-modifiers), this package lets ancestors consume movement before the child or handle the remainder afterward. It also coordinates fling velocity and bouncing without requiring a sliver-based layout.
+Flutter standard APIs can make Android and iOS-style scroll coordination difficult.
 
-For pull-to-refresh, notification-based implementations react after content moves. Consumption callbacks let the indicator handle movement first and pass the remainder to the content, keeping both in one continuous interaction.
+Similar to [Jetpack Compose nested scrolling](https://developer.android.com/develop/ui/compose/touch-input/scroll/nested-scroll-modifiers), this package lets ancestors consume movement before the child or handle the remainder afterward.
 
-Both vertical and horizontal scrolling are supported. Connections handle vertical events by default, set `axis: Axis.horizontal` to handle horizontal events.
+It also coordinates fling velocity and bouncing without requiring a sliver-based layout.
+
+For pull to refresh, scroll notifications report movement after it has occurred, making it harder to share a drag between the indicator and the content.
+
+With consumption callbacks, the indicator can consume part of the drag and let the content handle the rest, coordinating both within the same gesture.
 
 ## Related Packages
 
@@ -44,41 +48,29 @@ NestedScrollConnection(
   child: NestedScrollControllerScope(
     scrollDirection: Axis.horizontal,
     factory: (_) => NestedScrollController(),
-    builder: (context, controller) => ListView.builder(
-      controller: controller,
-      scrollDirection: Axis.horizontal,
-      itemCount: 20,
-      itemBuilder: (context, index) => SizedBox(
-        width: 120,
-        child: Text('Item $index'),
-      ),
-    ),
+    builder: (context, controller) {
+      return ListView.builder(
+        controller: controller,
+        scrollDirection: .horizontal,
+        itemCount: 20,
+        itemBuilder: ...,
+      );
+    }
   ),
 );
 ```
 
-Connections and predicates only receive events from their configured axis. Events pass through connections on the other axis to matching ancestors. Controller scopes share a primary controller only when their axes match.
+Connections and predicates only receive events from their configured axis.
+
+Events pass through connections on the other axis to matching ancestors. Controller scopes share a primary controller only when their axes match.
 
 With `reverse` or RTL text direction, callbacks still use scroll-coordinate signs rather than physical left/right directions.
 
-### How much should a callback return?
-
-Each event callback receives the available amount and the originating `NestedScrollPosition`. Return the amount your component consumed, keeping the same sign as the input.
-
-For example, given `available == -80`, returning `-30` consumes 30 pixels and leaves `-50` for further processing. Return `0` to consume nothing, or `available` to consume everything. Do not return the remainder or consume more than the available amount.
-
-| Callback | When it runs |
-| --- | --- |
-| onPreScroll | Before the child applies movement. Consume offsets here to let an ancestor handle part or all of the movement first. |
-| onPostScroll | When movement remains after the child reaches its scroll boundary. |
-| onFling | Before a ballistic simulation starts. Return the consumed velocity, in logical pixels per second. |
-| onBouncing | When handling bouncing overflow or repaying a previously borrowed bounce offset. |
-
-For pre-scroll and post-scroll offsets, positive values move toward the minimum scroll extent and negative values move toward the maximum. Fling velocity and bouncing use their respective event signs; preserve the sign supplied to each callback.
-
 ### How to control event propagation?
 
-Connections can be nested. Set `propagation` to control which connection handles an event first. Each consumer receives the remaining amount, and propagation stops when the input is fully consumed.
+Connections can be nested. Set `propagation` to control which connection handles an event first.
+
+Each consumer receives the remaining amount, and propagation stops when the input is fully consumed.
 
 | NestedScrollPropagation | Description |
 | --- | --- |
@@ -88,7 +80,9 @@ Connections can be nested. Set `propagation` to control which connection handles
 
 When directional propagation encounters mixed modes, it orders connections as `selfFirst`, `directional`, then `deferToAncestor` for positive input, and reverses that order for negative input.
 
-Use `predicate` when a connection needs priority over the normal propagation order. Returning `true` gives that connection an early opportunity to consume the event. The predicate itself does not consume anything; its corresponding event callback must return the consumed amount.
+Use `predicate` when a connection needs priority over the normal propagation order. Returning `true` gives that connection an early opportunity to consume the event. The predicate itself does not consume anything.
+
+its corresponding event callback must return the consumed amount.
 
 ### How to share a scroll controller?
 
@@ -121,4 +115,6 @@ Return `false` from the notification callback to allow the notification to conti
 | isBallisticScrolling | Whether the current activity is a ballistic scroll activity. |
 | isNestedScrolling | Whether nested scrolling is active, allowing ballistic motion beyond the scroll boundaries of the child. |
 
-The controller uses `BallisticNestedScrollActivity` to apply simulation deltas while ancestors consume movement. Most integrations only need the connection callbacks and do not need to create an activity directly.
+The controller uses `BallisticNestedScrollActivity` to apply simulation deltas while ancestors consume movement.
+
+Most integrations only need the connection callbacks and do not need to create an activity directly.
